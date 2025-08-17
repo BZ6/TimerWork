@@ -11,6 +11,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - app-network
+    restart: unless-stopped
 
   backend:
     build: ./backend
@@ -22,23 +23,24 @@ services:
       DB_NAME: timerwork
       DB_USER: admin
       DB_PASSWORD: password
-      JWT_SECRET: your-super-secret-jwt-key
+      JWT_SECRET: your-super-secret-jwt-key-change-in-production
     depends_on:
       - postgres
     networks:
       - app-network
+    restart: unless-stopped
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
     ports:
-      - "0.0.0.0:3000:3000"
-    environment:
-      - HOST=0.0.0.0
-      - PORT=3000
+      - "0.0.0.0:80:80"
     depends_on:
       - backend
     networks:
       - app-network
+    restart: unless-stopped
 
 volumes:
   postgres_data:

@@ -67,22 +67,55 @@
 
 ### Предварительные требования
 - Docker и Docker Compose
-- Порты 3000, 8080, 5432 должны быть свободны
+- Порты 3000, 8080, 5432 должны быть свободны (development)
+- Порты 80, 8080, 5432 должны быть свободны (production)
 
-### Запуск системы
+### Development режим
+
 ```bash
 # Клонирование репозитория
-git clone <repository-url>
+git clone https://github.com/BZ6/TimerWork.git
 cd TimerWork
 
-# Запуск всех сервисов
+# Запуск development версии
 docker-compose up --build
 ```
 
+### Production режим
+
+```bash
+# Клонирование репозитория
+git clone https://github.com/BZ6/TimerWork.git
+cd TimerWork
+
+# Запуск production версии
+docker-compose -f docker-compose.prod.yml up --build -d
+```
+
+### Различия между режимами
+
+| Параметр | Development | Production |
+|----------|-------------|------------|
+| Frontend | React dev server | Nginx + React build |
+| Порт фронтенда | 3000 | 80 |
+| Оптимизация | Нет | Да |
+| Hot reload | Да | Нет |
+| Gzip сжатие | Нет | Да |
+| Кэширование статики | Нет | Да |
+| Размер образа | Больше | Меньше |
+| Время запуска | Быстрее | Медленнее (сборка) |
+
 ### Доступ к приложению
-- **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:8080/api
-- **PostgreSQL**: localhost:5432 (пользователь: postgres, пароль: password)
+
+**Development:**
+- **Frontend**: <http://localhost:3000>
+- **Backend API**: <http://localhost:8080/api>
+- **PostgreSQL**: localhost:5432
+
+**Production:**
+- **Frontend**: <http://YOUR_SERVER_IP>
+- **Backend API**: <http://YOUR_SERVER_IP:8080/api>
+- **PostgreSQL**: localhost:5432 (только внутри Docker network)
 
 ## 📡 API Documentation
 
@@ -200,13 +233,19 @@ JWT_SECRET=your-secret-key
 REACT_APP_API_URL=http://localhost:8080/api
 ```
 
-### Сборка production
+### Управление контейнерами
 ```bash
-# Сборка всех сервисов
-docker-compose build
+# Остановка всех сервисов
+docker-compose down                              # development
+docker-compose -f docker-compose.prod.yml down  # production
 
-# Запуск в production режиме
-docker-compose up -d
+# Просмотр логов
+docker-compose logs -f                           # development
+docker-compose -f docker-compose.prod.yml logs -f  # production
+
+# Перезапуск отдельного сервиса
+docker-compose restart frontend                 # development
+docker-compose -f docker-compose.prod.yml restart frontend  # production
 ```
 
 ## 🔒 Безопасность
@@ -250,6 +289,53 @@ curl http://localhost:8080/api/workweek
 
 # С авторизацией
 curl -H "Authorization: Bearer <token>" http://localhost:8080/api/workweek
+```
+
+### Проблемы с запуском
+
+#### Фронтенд недоступен по IP
+1. **Проверьте порты**: убедитесь что порт 80 (production) или 3000 (dev) открыт
+2. **Firewall**: настройте файрвол для входящих соединений
+3. **Bind адрес**: проверьте что контейнеры привязаны к 0.0.0.0
+4. **Логи**: `docker-compose logs frontend` или `docker-compose -f docker-compose.prod.yml logs frontend`
+
+#### Backend API недоступен
+1. **CORS настройки**: убедитесь что CORS разрешает запросы с вашего домена
+2. **Сеть**: проверьте что backend и frontend в одной Docker сети
+3. **Environment**: проверьте переменные окружения
+4. **Логи**: `docker-compose logs backend` или `docker-compose -f docker-compose.prod.yml logs backend`
+
+#### База данных не подключается
+1. **Порты**: проверьте что PostgreSQL контейнер запущен
+2. **Переменные**: убедитесь что DB_HOST, DB_USER, DB_PASSWORD правильные
+3. **Сеть**: проверьте подключение между контейнерами
+4. **Логи**: `docker-compose logs postgres` или `docker-compose -f docker-compose.prod.yml logs postgres`
+
+### Команды для диагностики
+```bash
+# Статус контейнеров
+docker-compose ps                                # development
+docker-compose -f docker-compose.prod.yml ps    # production
+
+# Проверка сетей
+docker network ls
+docker network inspect timerwork_app-network
+
+# Проверка портов (development)
+netstat -tulpn | grep :3000
+netstat -tulpn | grep :8080
+
+# Проверка портов (production)  
+netstat -tulpn | grep :80
+netstat -tulpn | grep :8080
+
+# Тест подключения к API
+curl -v http://localhost:8080/api/register       # development
+curl -v http://YOUR_SERVER_IP:8080/api/register  # production
+
+# Перезапуск конкретного сервиса
+docker-compose restart frontend                 # development
+docker-compose -f docker-compose.prod.yml restart frontend  # production
 ```
 
 ## 📝 Changelog
