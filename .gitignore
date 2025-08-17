@@ -81,7 +81,7 @@ dist
 
 # Gatsby files
 .cache/
-public
+# public - убрано, так как для React приложения папка public обязательна
 
 # Storybook build outputs
 .out
